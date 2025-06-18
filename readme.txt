@@ -8,3 +8,5 @@ Each subfoulder corresponds to a site, with the site name being the name of the 
 a session column tracks individual files, and will be in order the files are uploaded in the foulder, not necessarly chronological
 
 # outputs a metadata foulder with graph and copy of the merged dataframe
+
+# updates existing 15 minute gDATA data.  The update query is probably safer but a bit slower.

@@ -25,7 +25,7 @@ from pathlib import Path
 from PIL import Image
 from datetime import datetime, timedelta
 import os
-from sql_alchemy import get_site_sql_id
+from sql_alchemy import get_site_sql_id, update_15_minute_data
 
 gdata_server = os.getenv("gdata_server")
 gdata_driver = os.getenv("gdata_driver")
@@ -35,7 +35,7 @@ gdata_database = os.getenv("gdata_database")
 config = configparser.ConfigParser()
 config.read('config\gdata_config.ini')
 
-
+parameter = "groundwater_level"
 # Define the folder path
 folder_path = Path(r"bulk_upload")
 
@@ -140,7 +140,9 @@ for subfolder in subfolders:
     plt.grid(False)
     plt.tight_layout()
     plt.savefig(f"bulk_upload\{site}\metadata\{site} water temperature.pdf")
-    
+    #plt.show()
+
+    update_15_minute_data(data, site, parameter)
         #print("upload errors")
         #print(errors)
         #data = data.dropna()
