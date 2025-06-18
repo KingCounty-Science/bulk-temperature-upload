@@ -11,3 +11,6 @@ a session column tracks individual files, and will be in order the files are upl
 
 # updates existing 15 minute gDATA data.  The update query is probably safer but a bit slower.
 # updates daily table based on data in gData
+
+
+### current error handeling involves adding the error message to the file name.  This has its advantages and disadvantages
