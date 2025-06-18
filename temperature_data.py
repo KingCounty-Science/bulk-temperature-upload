@@ -62,63 +62,85 @@ for subfolder in subfolders:
     session = 0 # session will not necessarly be chronological but will label individual upload files
     for file in files:
             #try:
-                print("file: ",  file)
-                df = pd.read_csv(file, skiprows=1, usecols=[1,3], parse_dates=[0]) # Adjust format as needed)  # Skip first row and ignore the first column
+        print("file: ",  file)
+        df = pd.read_csv(file, skiprows=1, usecols=[1,3], parse_dates=[0]) # Adjust format as needed)  # Skip first row and ignore the first column
                 # clean column names 
                
-                df.columns = df.columns.str.replace(r"\s*\(.*?\)", "", regex=True)
-                df.columns = df.columns.str.replace(",", "", regex=False)
-                df = df.rename(columns={df.columns[0]: 'datetime'})
-                if df.columns[1] == "Temp °F": # if in F convert to c
+        df.columns = df.columns.str.replace(r"\s*\(.*?\)", "", regex=True)
+        df.columns = df.columns.str.replace(",", "", regex=False)
+        df = df.rename(columns={df.columns[0]: 'datetime'})
+        if df.columns[1] == "Temp °F": # if in F convert to c
                     df["Temp °F"] = (df["Temp °F"] - 32) / 1.8
 
-                df = df.rename(columns={df.columns[1]: 'water_temperature'})  
+        df = df.rename(columns={df.columns[1]: 'water_temperature'})  
              
-                #df['rolling'] = df["water_level"].rolling(4,min_periods=1, center=True).mean()
-                df["site"] = site
-                df["site_sql_id"] = site_sql_id
-                df["session"] = session
-                session = session + 1
-                df = df.dropna()
-                #### remove outliers on first and last 12 rows (3 hours)
-                # get statistics
-                mean_head = df.loc[df.index[:11], "water_temperature"].mean().round(2)
-                mean_tail = df.loc[df.index[-10:], "water_temperature"].mean().round(2)
+        df["site"] = site
+        df["site_sql_id"] = site_sql_id
+        df["session"] = session
+        session = session + 1
+        df = df.dropna()
+        #### remove outliers on first and last 12 rows (3 hours)
+        # get statistics
+        mean_head = df.loc[df.index[:11], "water_temperature"].mean().round(2)
+        mean_tail = df.loc[df.index[-10:], "water_temperature"].mean().round(2)
 
-                std_head = df.loc[df.index[:11], "water_temperature"].std().round(2)
-                std_tail = df.loc[df.index[-10:], "water_temperature"].std().round(2)
-                # remove data outside 1 stdev
-                # --- first 12 rows -------------------------------------------------
-                idx_head = df.index[:12]                 
-                col      = "water_temperature"
+        std_head = df.loc[df.index[:11], "water_temperature"].std().round(2)
+        std_tail = df.loc[df.index[-10:], "water_temperature"].std().round(2)
+        # remove data outside 1 stdev
+        # --- first 12 rows -------------------------------------------------
+        idx_head = df.index[:12]                 
+        col      = "water_temperature"
 
-                head_vals = df.loc[idx_head, col]
+        head_vals = df.loc[idx_head, col]
 
-                df.loc[idx_head, col] = head_vals.mask((head_vals > mean_head + std_head) | (head_vals < mean_head - std_head))
+        df.loc[idx_head, col] = head_vals.mask((head_vals > mean_head + std_head) | (head_vals < mean_head - std_head))
 
-                # --- last 12 rows --------------------------------------------------
-                idx_tail  = df.index[-12:]                 
-                tail_vals = df.loc[idx_tail, col]
+        # --- last 12 rows --------------------------------------------------
+        idx_tail  = df.index[-12:]                 
+        tail_vals = df.loc[idx_tail, col]
 
-                df.loc[idx_tail, col] = tail_vals.mask((tail_vals > mean_tail + std_tail) | (tail_vals < mean_tail - std_tail))
+        df.loc[idx_tail, col] = tail_vals.mask((tail_vals > mean_tail + std_tail) | (tail_vals < mean_tail - std_tail))
 
-                # fill values               
-                df["water_temperature"] = df["water_temperature"].interpolate(method="linear", limit=4, limit_direction = "both")
-                print(df)
-                #print(df.loc[:11, "water_temperature"])
-                #print(df.loc[df.index[-10:], "water_temperature"])
-                
-               
-                
-                # remove commasdf.iloc[:, 1] = df.iloc[:, 1]df.iloc[:, 1] = df.iloc[:, 1]
-                #print(df.head(4))
-                #data = pd.concat([df, data], index = "ignore")
-                data = pd.concat([data, df])
-                #data.append(df)
-                #print(data)
+        # fill values               
+        df["water_temperature"] = df["water_temperature"].interpolate(method="linear", limit=4, limit_direction = "both")
+        print(df)
+      
+        data = pd.concat([data, df])
+              
            # except:
               #  errors.append(file.name)
-    print(data)            
+    data = data.sort_values(by="datetime", ascending=True)
+    print(data)
+    import matplotlib.pyplot as plt
+
+   
+    # Ensure datetime column is datetime and sorted
+    data["datetime"] = pd.to_datetime(data["datetime"])
+    data = data.sort_values(by="datetime")
+
+    ### meta data
+    # make a metadata foulder
+    os.makedirs(f"bulk_upload\{site}\metadata", exist_ok=True)
+    # save file to metadata
+    data.to_csv(f"bulk_upload\{site}\metadata\{site}_data.csv")
+    # create a graph
+    # Start a new plot
+    plt.figure(figsize=(10, 5))
+
+    # Plot each session as a separate line
+    for session_id, group in data.groupby("session"):
+        plt.plot(group["datetime"], group["water_temperature"],
+                label=f"Session {session_id}", linestyle='-')
+
+    # Add labels and legend
+    plt.xlabel("Datetime")
+    plt.ylabel("Water Temperature")
+    plt.title(f"{site} water temperature from upload files")
+    plt.legend(title="Session", bbox_to_anchor=(1.05, 1), loc='upper left')
+    plt.grid(False)
+    plt.tight_layout()
+    plt.savefig(f"bulk_upload\{site}\metadata\{site} water temperature.pdf")
+    
         #print("upload errors")
         #print(errors)
         #data = data.dropna()
