@@ -56,9 +56,10 @@ for subfolder in subfolders:
         # List all CSV files in the folder
     files = [file for file in folder_path.iterdir() if file.is_file() and file.suffix == '.csv']
     
-        # Import each CSV file as a pandas DataFrame
-        #data = pd.DataFrame(columns=['site', 'datetime', 'water_temperature'])
         
+    # create blank df
+    data = pd.DataFrame(columns=['site', 'site_sql_id', 'datetime', 'water_temperature', 'session'])
+    session = 0 # session will not necessarly be chronological but will label individual upload files
     for file in files:
             #try:
                 print("file: ",  file)
@@ -76,6 +77,8 @@ for subfolder in subfolders:
                 #df['rolling'] = df["water_level"].rolling(4,min_periods=1, center=True).mean()
                 df["site"] = site
                 df["site_sql_id"] = site_sql_id
+                df["session"] = session
+                session = session + 1
                 df = df.dropna()
                 #### remove outliers on first and last 12 rows (3 hours)
                 # get statistics
@@ -100,23 +103,22 @@ for subfolder in subfolders:
                 df.loc[idx_tail, col] = tail_vals.mask((tail_vals > mean_tail + std_tail) | (tail_vals < mean_tail - std_tail))
 
                 # fill values               
-                df["water_temperature"] = df["water_temperature"].interpolate(method="linear", limit=4)
-                
+                df["water_temperature"] = df["water_temperature"].interpolate(method="linear", limit=4, limit_direction = "both")
+                print(df)
                 #print(df.loc[:11, "water_temperature"])
                 #print(df.loc[df.index[-10:], "water_temperature"])
-                print(df.head(12))
-                print(df.tail(12))
+                
                
                 
                 # remove commasdf.iloc[:, 1] = df.iloc[:, 1]df.iloc[:, 1] = df.iloc[:, 1]
                 #print(df.head(4))
                 #data = pd.concat([df, data], index = "ignore")
-                #data = pd.concat([data, df])
+                data = pd.concat([data, df])
                 #data.append(df)
                 #print(data)
            # except:
               #  errors.append(file.name)
-                
+    print(data)            
         #print("upload errors")
         #print(errors)
         #data = data.dropna()
