@@ -77,32 +77,41 @@ for subfolder in subfolders:
                 df["site"] = site
                 df["site_sql_id"] = site_sql_id
                 df = df.dropna()
-                print(df)
-                threshold = df['water_temperature'].std()
-                print("thresh", threshold)
+                #### remove outliers on first and last 12 rows (3 hours)
+                # get statistics
+                mean_head = df.loc[df.index[:11], "water_temperature"].mean().round(2)
+                mean_tail = df.loc[df.index[-10:], "water_temperature"].mean().round(2)
 
-                # Calculate absolute difference between consecutive values
-                df["diff"] = df["value"].diff().abs()
+                std_head = df.loc[df.index[:11], "water_temperature"].std().round(2)
+                std_tail = df.loc[df.index[-10:], "water_temperature"].std().round(2)
+                # remove data outside 1 stdev
+                # --- first 12 rows -------------------------------------------------
+                idx_head = df.index[:12]                 
+                col      = "water_temperature"
 
-                # Keep rows where the change is below the threshold
-                filtered_df = df[(df["diff"].isna()) | (df["diff"] <= threshold)]
-                print(df)
-                """df['std'] = df['water_temperature'].rolling(window=3, center = True, min_periods=3).std().round(2)
-                df["avg"] = df['avg'].bfill()
-                df["avg"] = df['avg'].ffill()
-                df["std"] = df['std'].bfill()
-                df["std"] = df['std'].ffill()"""
-                """df['diff'] = df["water_temperature"].diff().round(2)
-                df['avg'] = df['diff'].rolling(window=4, center = False, min_periods=3).mean().round(2)
-                df['std'] = df['diff'].rolling(window=4, center = False, min_periods=3).std().round(2)
+                head_vals = df.loc[idx_head, col]
+
+                df.loc[idx_head, col] = head_vals.mask((head_vals > mean_head + std_head) | (head_vals < mean_head - std_head))
+
+                # --- last 12 rows --------------------------------------------------
+                idx_tail  = df.index[-12:]                 
+                tail_vals = df.loc[idx_tail, col]
+
+                df.loc[idx_tail, col] = tail_vals.mask((tail_vals > mean_tail + std_tail) | (tail_vals < mean_tail - std_tail))
+
+                # fill values               
+                df["water_temperature"] = df["water_temperature"].interpolate(method="linear", limit=4)
                 
-                df.loc[((df["diff"] > df["avg"]+df["std"]) | (df["diff"] < df["avg"]-df["std"])), "water_temperature" ] = np.nan
-                print(df)"""
+                #print(df.loc[:11, "water_temperature"])
+                #print(df.loc[df.index[-10:], "water_temperature"])
+                print(df.head(12))
+                print(df.tail(12))
+               
                 
                 # remove commasdf.iloc[:, 1] = df.iloc[:, 1]df.iloc[:, 1] = df.iloc[:, 1]
                 #print(df.head(4))
                 #data = pd.concat([df, data], index = "ignore")
-                data = pd.concat([data, df])
+                #data = pd.concat([data, df])
                 #data.append(df)
                 #print(data)
            # except:
