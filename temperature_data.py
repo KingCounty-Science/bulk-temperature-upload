@@ -25,7 +25,7 @@ from pathlib import Path
 from PIL import Image
 from datetime import datetime, timedelta
 import os
-from sql_alchemy import get_site_sql_id, update_15_minute_data
+from sql_alchemy import get_site_sql_id, update_15_minute_data, calculate_daily_values
 
 gdata_server = os.getenv("gdata_server")
 gdata_driver = os.getenv("gdata_driver")
@@ -79,6 +79,9 @@ for subfolder in subfolders:
         df["session"] = session
         session = session + 1
         df = df.dropna()
+        # conver to deg c if need be
+        if df["data"].mean() > 30:  # f
+                    df["data"] = round((df["data"] - 32) * (5/9), 2)
         #### remove outliers on first and last 12 rows (3 hours)
         # get statistics
         mean_head = df.loc[df.index[:11], "water_temperature"].mean().round(2)
@@ -143,6 +146,11 @@ for subfolder in subfolders:
     #plt.show()
 
     update_15_minute_data(data, site, parameter)
+
+    
+   
+    calculate_daily_values(data, parameter, site)
+   
         #print("upload errors")
         #print(errors)
         #data = data.dropna()

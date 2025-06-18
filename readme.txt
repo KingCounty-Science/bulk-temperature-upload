@@ -10,3 +10,4 @@ a session column tracks individual files, and will be in order the files are upl
 # outputs a metadata foulder with graph and copy of the merged dataframe
 
 # updates existing 15 minute gDATA data.  The update query is probably safer but a bit slower.
+# updates daily table based on data in gData
