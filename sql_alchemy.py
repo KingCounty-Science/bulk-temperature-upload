@@ -49,6 +49,7 @@ def update_15_minute_data(data, site, parameter):
     # get site sql_id
     site_sql_id = get_site_sql_id(site)
     data["datetime"] = data["datetime"] + pd.Timedelta(hours=7)
+    data = data.where(pd.notnull(data), None)
     counter = 0
     for index, row in data.iterrows():
             #try:
@@ -151,7 +152,7 @@ def calculate_daily_values(df, parameter, site):
             for index, row in daily_data.iterrows():
                 try:
                     daily_data.loc[daily_data.index == index].to_sql(config[parameter]['daily_table'], sql_engine, method=None, if_exists='append', index=False)
-                except IntegrityError:
+                except:
                 
                     row_dict = row.to_dict()
                     
