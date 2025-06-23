@@ -114,7 +114,14 @@ def calculate_daily_values(df, parameter, site):
                     depth = f"ROUND( AVG( CAST({config[parameter]['ice']} AS INT) ) , 2) AS {config[parameter]['daily_depth']}, "
                     ice =  f"MAX( CAST({config[parameter]['ice']} AS INT)) AS {config[parameter]['daily_ice']}, "
             if parameter == "groundwater_level":
-                    groundwater_temperature =  f"ROUND(AVG({config[parameter]['groundwater_temperature']}), 2) AS {config[parameter]['groundwater_temperature']}, "
+                    #groundwater_temperature =  f"ROUND(AVG({config[parameter]['groundwater_temperature']}), 2) AS {config[parameter]['groundwater_temperature']}, "
+                    groundwater_temperature = (
+                    f"CASE "
+                    f"WHEN ROUND(AVG({config[parameter]['groundwater_temperature']}), 2) = 0 THEN NULL "
+                    f"ELSE ROUND(AVG({config[parameter]['groundwater_temperature']}), 2) "
+                    f"END AS {config[parameter]['groundwater_temperature']}, "
+                    )
+                   
             with sql_engine.begin() as conn:
                     # 120 is yyyy-mm-dd hh:mi:ss
                     # 105 dd-mm-yyyy
@@ -153,27 +160,34 @@ def calculate_daily_values(df, parameter, site):
                 try:
                     daily_data.loc[daily_data.index == index].to_sql(config[parameter]['daily_table'], sql_engine, method=None, if_exists='append', index=False)
                 except:
-                
-                    row_dict = row.to_dict()
+                    try:
+                        row_dict = row.to_dict()
+                        update_cols = [col for col in row_dict if col not in ["G_ID", config[parameter]['daily_datetime']]]
+                        key_cols = ["G_ID", "P_Date"]
+
+                        set_clause = ",\n    ".join([f"{col} = ?" for col in update_cols])
+                        where_clause = " AND ".join([f"{col} = ?" for col in key_cols])
+
+                        update_sql = f"""
+                        UPDATE {config[parameter]['daily_table']}
+                        SET
+                            {set_clause}
+                        WHERE {where_clause}
+                        """
+                        
+                        
+                        #update_values =  [row_dict[col] for col in key_cols] + [row_dict[col] for col in update_cols]
+                        update_values = [row_dict[col] for col in update_cols] + [row_dict[col] for col in key_cols]
                     
-                    update_cols = [col for col in row_dict if col not in ["G_ID", config[parameter]['daily_datetime']]]
-                    key_cols = ["G_ID", "P_Date"]
-
-                    set_clause = ",\n    ".join([f"{col} = ?" for col in update_cols])
-                    where_clause = " AND ".join([f"{col} = ?" for col in key_cols])
-
-                    update_sql = f"""
-                    UPDATE {config[parameter]['daily_table']}
-                    SET
-                        {set_clause}
-                    WHERE {where_clause}
-                    """
-                    
-
-                    #update_values =  [row_dict[col] for col in key_cols] + [row_dict[col] for col in update_cols]
-                    update_values = [row_dict[col] for col in update_cols] + [row_dict[col] for col in key_cols]
-            
-                    with sql_engine.begin() as cnn:
-                        cnn.execute(update_sql, update_values)
+                        with sql_engine.begin() as cnn:
+                            cnn.execute(update_sql, update_values)
+                    except:
+                  
+                        pass
 
         return daily_data
+
+"""df = pd.read_csv(f"bulk_upload\RUT_JO_W2\metadata\RUT_JO_W2_data.csv")
+df["datetime"] = pd.to_datetime(df["datetime"])
+print(df)
+calculate_daily_values(df, "groundwater_level", "RUT_JO_W2")"""

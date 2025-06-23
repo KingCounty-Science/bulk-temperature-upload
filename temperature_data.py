@@ -122,17 +122,16 @@ def import_from_folder():
                 df["session"] = session
                 session = session + 1
                 df = df[['site', 'site_sql_id', 'datetime', 'water_temperature', 'session']]
-                #df = df.dropna()
-                print(df)
-
+                df = df.dropna(subset=["water_temperature"])
                 # 4. Resample to 15-minute intervals
               
-                # 5. Optionally re-interpolate if resampling introduced NaNs
+                # 5. Optionally r
                 
 
                 # Concatenate only non-duplicate datetime rows
                 # Filter df to only rows with datetime not in data
                 df_filtered = df[~df["datetime"].isin(data["datetime"])]
+
                 data = pd.concat([data, df_filtered], ignore_index=True)
                 #data = pd.concat([data, df])
                     
