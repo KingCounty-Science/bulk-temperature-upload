@@ -117,9 +117,19 @@ def import_from_folder():
                 # 3. Interpolate water_temperature (already done)
                 df = df.set_index("datetime")
                
-                df = df.resample("1H").mean()
-                print("df")
-                print(df.head(5))
+
+                # Calculate time differences and find the most common interval
+                time_diffs = df.index.to_series().diff().dropna()
+                most_common_interval = time_diffs.mode()[0]
+
+                if most_common_interval <= pd.Timedelta(minutes=15):
+                    df = df.resample("15T").mean()  # Resample to 15 minutes
+                    print("Resampled to 15 minutes")
+                else:
+                    df = df.resample("1H").mean()   # Resample to 1 hour
+                    print("Resampled to 1 hour")
+                    print("df")
+                    print(df.head(5))
                 df.reset_index(drop=False, inplace = True)
                 
                 
